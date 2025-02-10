@@ -1,7 +1,6 @@
 import streamlit as st
 import requests
 import time
-import os
 
 # --- Helper Functions ---
 
@@ -27,7 +26,7 @@ def check_session_limit():
 
 def call_generate_api(prompt):
     """Call the generate content API."""
-    url = "https://r1api.onrender.com/generate"  # Replace with the actual API endpoint
+    url = "https://r1api.onrender.com/generate"  # Your hosted Flask API URL
     headers = {"Content-Type": "application/json"}
     payload = {"prompt": prompt}
     response = requests.post(url, json=payload, headers=headers)
@@ -35,12 +34,13 @@ def call_generate_api(prompt):
     if response.status_code == 200:
         return response.json()
     else:
+        # Log and show the error if the status is not 200
         st.error(f"Error generating content: {response.status_code} - {response.text}")
         return None
 
 def call_regenerate_api(original_text):
     """Call the regenerate content API."""
-    url = "https://r1api.onrender.com/regenerate"  # Replace with the actual API endpoint
+    url = "https://r1api.onrender.com/regenerate"  # Your hosted Flask API URL
     headers = {"Content-Type": "application/json"}
     payload = {"original_text": original_text}
     response = requests.post(url, json=payload, headers=headers)
@@ -48,6 +48,7 @@ def call_regenerate_api(original_text):
     if response.status_code == 200:
         return response.json()
     else:
+        # Log and show the error if the status is not 200
         st.error(f"Error regenerating content: {response.status_code} - {response.text}")
         return None
 
