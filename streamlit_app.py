@@ -3,7 +3,7 @@ import requests
 import os
 
 # Set up the API URL and API Key (you can replace this with your Flask API URL)
-API_URL = 'http://localhost:5000/generate'  # Update this to your Flask API's URL
+API_URL = 'https://r1api.onrender.com/generate'  # Update this to your Flask API's URL
 API_KEY = os.getenv('API_KEY')  # Set your environment variable or hardcode the key
 
 # Function to call the Flask API
