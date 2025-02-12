@@ -1,114 +1,58 @@
 import streamlit as st
 import requests
-import time
+import os
 
-# --- Helper Functions ---
+# Set up the API URL and API Key (you can replace this with your Flask API URL)
+API_URL = 'http://localhost:5000/generate'  # Update this to your Flask API's URL
+API_KEY = os.getenv('API_KEY')  # Set your environment variable or hardcode the key
 
-def initialize_session():
-    """Initializes session variables."""
-    if 'session_count' not in st.session_state:
-        st.session_state.session_count = 0
-    if 'block_time' not in st.session_state:
-        st.session_state.block_time = None
-
-def check_session_limit():
-    """Checks if the user has reached the session limit and manages block time."""
-    if st.session_state.block_time:
-        time_left = st.session_state.block_time - time.time()
-        if time_left > 0:
-            st.error(f"You have reached your session limit. Please try again in {int(time_left)} seconds.")
-            st.stop()
-
-    if st.session_state.session_count >= 5:
-        st.session_state.block_time = time.time() + 15 * 60  # Block for 15 minutes
-        st.error("You have reached the session limit. Please wait for 15 minutes.")
-        st.stop()
-
-def call_generate_api(prompt):
-    """Call the generate content API."""
-    url = "https://r1api.onrender.com/generate"  # Your hosted Flask API URL
-    headers = {"Content-Type": "application/json"}
-    payload = {"prompt": prompt}
-    response = requests.post(url, json=payload, headers=headers)
-
-    if response.status_code == 200:
-        return response.json()
-    else:
-        # Log and show the error if the status is not 200
-        st.error(f"Error generating content: {response.status_code} - {response.text}")
-        return None
-
-def call_regenerate_api(original_text):
-    """Call the regenerate content API."""
-    url = "https://r1api.onrender.com/regenerate"  # Your hosted Flask API URL
-    headers = {"Content-Type": "application/json"}
-    payload = {"original_text": original_text}
-    response = requests.post(url, json=payload, headers=headers)
-
-    if response.status_code == 200:
-        return response.json()
-    else:
-        # Log and show the error if the status is not 200
-        st.error(f"Error regenerating content: {response.status_code} - {response.text}")
-        return None
-
-# --- Streamlit App ---
-
-# Initialize session tracking
-initialize_session()
-
-# App Title and Description
-st.title("AI-Powered Content Generator")
-st.write("Generate high-quality content using AI models and check its originality.")
-
-# Prompt Input Field
-prompt = st.text_area("Enter your prompt:", placeholder="Write a blog about AI trends in 2025.")
-
-# Session management to check for block time and session limits
-check_session_limit()
-
-# Generate Content Button
-if st.button("Generate Content"):
-    if not prompt.strip():
-        st.error("Please enter a valid prompt.")
-    else:
-        try:
-            # Call the generate content API
-            api_response = call_generate_api(prompt)
-
-            if api_response:
-                # Display the generated content
-                st.subheader("Generated Content:")
-                st.write(api_response.get("generated_text", "No content generated."))
-
-                # Display search results
-                st.subheader("Originality Check (Search Results):")
-                search_results = api_response.get("search_results", [])
-                if search_results:
-                    for result in search_results[:5]:  # Show top 5 results
-                        with st.expander(result['title']):
-                            st.write(f"**Source:** [{result['link']}]({result['link']})")
-                            st.write(f"**Snippet:** {result['snippet']}")
-                            st.write("---")
-                else:
-                    st.write("No similar content found online. Your content is original.")
-
-                # Increment session count
-                st.session_state.session_count += 1
-
-        except Exception as e:
-            st.error(f"Error generating content: {e}")
-
-# Regenerate Content Button
-if st.button("Regenerate Content"):
-    if 'generated_text' in st.session_state:
-        original_text = st.session_state.generated_text
-        regenerated_response = call_regenerate_api(original_text)
-
-        if regenerated_response:
-            st.subheader("Regenerated Content:")
-            st.write(regenerated_response.get("regenerated_text", "No content generated."))
+# Function to call the Flask API
+def call_flask_api(prompt):
+    headers = {
+        'Authorization': API_KEY  # API Key for authentication
+    }
+    
+    # Prepare the payload
+    data = {
+        'prompt': prompt
+    }
+    
+    try:
+        # Send the POST request to the Flask API
+        response = requests.post(API_URL, json=data, headers=headers)
+        
+        if response.status_code == 200:
+            return response.json()
         else:
-            st.error("Error regenerating content.")
-    else:
-        st.error("No generated content found to regenerate.")
+            return {"error": f"Error {response.status_code}: {response.text}"}
+    except Exception as e:
+        return {"error": f"Failed to connect to the API: {str(e)}"}
+
+# Streamlit App UI
+def main():
+    st.title("AI Content Generation")
+
+    st.write("Enter a prompt, and the model will generate content for you.")
+    
+    # Text input for the user to provide a prompt
+    prompt = st.text_area("Enter your prompt here:", "")
+    
+    if st.button("Generate"):
+        if prompt:
+            # Call Flask API to generate content
+            response = call_flask_api(prompt)
+            
+            if 'error' in response:
+                st.error(response['error'])
+            else:
+                st.subheader("Generated Content:")
+                st.write(response['generated_text'])
+                
+                st.subheader("Search Results:")
+                for result in response['search_results']:
+                    st.write(f"- {result['title']}: {result['link']}")
+        else:
+            st.warning("Please enter a prompt before generating.")
+
+if __name__ == '__main__':
+    main()
